@@ -42,16 +42,16 @@ impl Emotes {
                 let mut cur = 0;
                 let mut remain = msg;
 
-                for (emote, start, end) in emoets_list.into_iter() {
+                for (emote, start_emote, end_emote) in emoets_list.into_iter() {
                     let find_emote = data.iter().find(|value| value.id == emote);
-                    let start = start - cur;
-                    let expeced_location = end - start + 1;
+                    let start = start_emote - cur;
+                    let expeced_location = end_emote - start_emote + 1;
 
                     let (remain2, (prev, expected)) =
                         tuple((take(start), take(expeced_location)))(remain)?;
 
                     remain = remain2;
-                    cur = end + 1;
+                    cur = end_emote + 1;
 
                     result.push(Message::Normal(Normal::new(prev)));
 
@@ -62,7 +62,7 @@ impl Emotes {
                         None => {
                             result.push(Message::Unknown(Unknown::new(expected, &emote)));
                         }
-                    }
+                    };
                 }
 
                 result.push(Message::Normal(Normal::new(remain)));
@@ -96,6 +96,7 @@ fn start_end(msg: &str) -> IResult<&str, (u64, u64)> {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename = "emote")]
 pub struct Emote {
     pub id: String,
     pub name: String,
@@ -118,6 +119,7 @@ pub struct EmotesTemplate {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
 pub enum Message {
     Normal(Normal),
     Emote(Emote),
@@ -125,6 +127,7 @@ pub enum Message {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(tag = "type", rename = "normal")]
 pub struct Normal {
     pub message: String,
 }
@@ -138,6 +141,7 @@ impl Normal {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(tag = "type", rename = "unknown")]
 pub struct Unknown {
     pub message: String,
     pub id: String,
