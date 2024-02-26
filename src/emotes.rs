@@ -33,9 +33,9 @@ impl Emotes {
         msg: &'a str,
         emotes: Option<Vec<(String, u64, u64)>>,
         template: &EmotesTemplate,
-    ) -> IResult<&'a str, Vec<Message>> {
+    ) -> IResult<&'a str, Option<Vec<Message>>> {
         match emotes {
-            None => Ok(("", vec![Message::Normal(Normal::new(msg))])),
+            None => Ok(("", None)),
             Some(emoets_list) => {
                 let mut result = vec![];
                 let data = &template.data;
@@ -66,7 +66,7 @@ impl Emotes {
                 }
 
                 result.push(Message::Normal(Normal::new(remain)));
-                Ok(("", result))
+                Ok(("", Some(result)))
             }
         }
     }
@@ -95,6 +95,11 @@ fn start_end(msg: &str) -> IResult<&str, (u64, u64)> {
     )(msg)
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+pub struct EmotesTemplate {
+    pub data: Vec<Emote>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename = "emote")]
 pub struct Emote {
@@ -104,18 +109,6 @@ pub struct Emote {
     pub format: Vec<String>,
     pub scale: Vec<String>,
     pub theme_mode: Vec<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Images {
-    pub url_1x: String,
-    pub url_2x: String,
-    pub url_4x: String,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct EmotesTemplate {
-    data: Vec<Emote>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -154,4 +147,11 @@ impl Unknown {
             id: id.into(),
         }
     }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Images {
+    pub url_1x: String,
+    pub url_2x: String,
+    pub url_4x: String,
 }
