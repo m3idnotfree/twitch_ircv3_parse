@@ -51,6 +51,11 @@ pub struct BadgeData {
     pub versions: Versions,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+pub struct BadgeTemplate {
+    pub data: Vec<BadgeDataJson>,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BadgeDataJson {
     pub set_id: String,
@@ -67,9 +72,4 @@ pub struct Versions {
     pub image_url_2x: String,
     pub image_url_4x: String,
     pub title: String,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct BadgeTemplate {
-    data: Vec<BadgeDataJson>,
 }
