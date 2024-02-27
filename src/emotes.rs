@@ -53,7 +53,11 @@ impl Emotes {
                     remain = remain2;
                     cur = end_emote + 1;
 
-                    result.push(Message::Normal(Normal::new(prev)));
+                    if !(prev.is_empty()
+                        || prev.len() == 1 && prev.chars().next().unwrap().is_whitespace())
+                    {
+                        result.push(Message::Normal(Normal::new(prev)));
+                    };
 
                     match find_emote {
                         Some(value) => {
@@ -65,7 +69,11 @@ impl Emotes {
                     };
                 }
 
-                result.push(Message::Normal(Normal::new(remain)));
+                println!("remai le, r{}r", remain);
+                println!("remai le, r{}r", remain.len());
+                if remain.len() != 0 {
+                    result.push(Message::Normal(Normal::new(remain)));
+                }
                 Ok(("", Some(result)))
             }
         }
