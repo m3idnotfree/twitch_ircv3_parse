@@ -11,7 +11,7 @@ pub use emotes::*;
 mod utils;
 pub use utils::*;
 
-trait ChatFormatJson {
+pub trait ChatFormatJson {
     fn chat_format_json(
         self,
         badges_template: &BadgeTemplate,
@@ -45,7 +45,7 @@ impl ChatFormatJson for PrivMsg {
         println!("m = {}", m);
         let (_, message) = Emotes::get_data(m, self.emotes, emoets_template).unwrap();
 
-        ChatInfo::new("PRIVMSG", Some(time), badges, Some(message))
+        ChatInfo::new("PRIVMSG", Some(time), badges, message)
     }
 }
 
@@ -100,7 +100,35 @@ pub enum Command {
 #[derive(Debug, PartialEq)]
 pub enum Ircv3 {
     Priv(PrivMsg),
+    Cap(Cap),
+    Number(Number),
     Other(Other),
+}
+#[derive(Debug, PartialEq)]
+pub struct Number {
+    command: String,
+    message: String,
+}
+impl Number {
+    pub fn new<T: Into<String>>(command: T, message: T) -> Number {
+        Number {
+            command: command.into(),
+            message: message.into(),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Cap {
+    is_capabilities: bool,
+}
+
+impl Cap {
+    pub fn new(params: &str) -> Cap {
+        let (_, is_capabilities) = is_capabilities(params).unwrap();
+
+        Cap { is_capabilities }
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -143,16 +171,22 @@ impl TwitchIrcMessage {
     pub fn parse(msg: &str) -> Ircv3 {
         let result = Ircv3Parse::new(msg);
         match result.command.as_str() {
-            "PRIVMSG" => Ircv3::Priv(PrivMsg::new(result.tags, result.prefix, result.message)),
+            "CAP" => Ircv3::Cap(Cap::new(result.message)),
+            "001" => Ircv3::Number(Number::new(result.command, result.message.to_string())),
+            "PRIVMSG" => Ircv3::Priv(PrivMsg::new(
+                result.tags.hashmap_string(),
+                result.prefix.to_string(),
+                result.message,
+            )),
             "CLEARCHAT" => Ircv3::Other(Other::new(
-                result.tags,
-                result.prefix,
+                result.tags.hashmap_string(),
+                result.prefix.to_string(),
                 result.command,
                 result.message.to_string(),
             )),
             _ => Ircv3::Other(Other::new(
-                result.tags,
-                result.prefix,
+                result.tags.hashmap_string(),
+                result.prefix.to_string(),
                 result.command,
                 result.message.to_string(),
             )),
