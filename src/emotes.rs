@@ -29,6 +29,52 @@ impl Emotes {
         }
     }
 
+    pub fn get_data_cdn_url<'a>(
+        msg: &'a str,
+        emotes: Option<Vec<(String, u64, u64)>>,
+    ) -> IResult<&'a str, Option<Vec<MessageCDN>>> {
+        match emotes {
+            None => Ok(("", None)),
+            Some(emotes_list) => {
+                let mut result = vec![];
+                let mut cur = 0;
+                let mut remain = msg;
+
+                for (emote, start_emote, end_emote) in emotes_list.into_iter() {
+                    let cdn_url = format!(
+                        "https://static-cdn.jtvnw.net/emoticons/v2/{}/default/dark/1.0",
+                        emote
+                    );
+                    let start = start_emote - cur;
+                    let expeced_location = end_emote - start_emote + 1;
+
+                    let (remain2, (prev, expected)) =
+                        tuple((take(start), take(expeced_location)))(remain)?;
+
+                    remain = remain2;
+                    cur = end_emote + 1;
+
+                    if !(prev.is_empty()
+                        || prev.len() == 1 && prev.chars().next().unwrap().is_whitespace())
+                    {
+                        result.push(MessageCDN::Normal(Normal::new(prev)));
+                    };
+
+                    result.push(MessageCDN::Emote(EmoteCDN::new(
+                        emote,
+                        expected.to_string(),
+                        cdn_url,
+                    )))
+                }
+
+                if remain.len() != 0 {
+                    result.push(MessageCDN::Normal(Normal::new(remain)));
+                }
+                Ok(("", Some(result)))
+            }
+        }
+    }
+
     pub fn get_data<'a>(
         msg: &'a str,
         emotes: Option<Vec<(String, u64, u64)>>,
@@ -69,8 +115,6 @@ impl Emotes {
                     };
                 }
 
-                println!("remai le, r{}r", remain);
-                println!("remai le, r{}r", remain.len());
                 if remain.len() != 0 {
                     result.push(Message::Normal(Normal::new(remain)));
                 }
@@ -106,6 +150,32 @@ fn start_end(msg: &str) -> IResult<&str, (u64, u64)> {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct EmotesTemplate {
     pub data: Vec<Emote>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum MessageCDN {
+    Normal(Normal),
+    Emote(EmoteCDN),
+    Unknown(Unknown),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename = "emote")]
+pub struct EmoteCDN {
+    pub id: String,
+    pub name: String,
+    pub url: String,
+}
+
+impl EmoteCDN {
+    pub fn new<T: Into<String>>(id: T, name: T, url: T) -> EmoteCDN {
+        EmoteCDN {
+            id: id.into(),
+            name: name.into(),
+            url: url.into(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
