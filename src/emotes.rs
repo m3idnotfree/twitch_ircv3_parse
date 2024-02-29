@@ -29,6 +29,23 @@ impl Emotes {
         }
     }
 
+    pub fn parse_str(msg: &str) -> Option<Vec<(&str, u64, u64)>> {
+        let (_, result) = opt(separated_list1(tag("/"), emotes_set_str))(msg).unwrap();
+        match result {
+            Some(value) => {
+                let mut value = value
+                    .into_iter()
+                    .flatten()
+                    .collect::<Vec<(&str, u64, u64)>>();
+
+                value.sort_by(|a, b| a.1.cmp(&b.1));
+
+                Some(value)
+            }
+            None => None,
+        }
+    }
+
     pub fn get_data_cdn_url<'a>(
         msg: &'a str,
         emotes: Option<Vec<(String, u64, u64)>>,
@@ -65,6 +82,48 @@ impl Emotes {
                         expected.to_string(),
                         cdn_url,
                     )))
+                }
+
+                if remain.len() != 0 {
+                    result.push(MessageCDN::Normal(Normal::new(remain)));
+                }
+                Ok(("", Some(result)))
+            }
+        }
+    }
+
+    pub fn get_data_cdn_url_str<'a>(
+        msg: &'a str,
+        emotes: Option<Vec<(&str, u64, u64)>>,
+    ) -> IResult<&'a str, Option<Vec<MessageCDN>>> {
+        match emotes {
+            None => Ok(("", None)),
+            Some(emotes_list) => {
+                let mut result = vec![];
+                let mut cur = 0;
+                let mut remain = msg;
+
+                for (emote, start_emote, end_emote) in emotes_list.into_iter() {
+                    let cdn_url = format!(
+                        "https://static-cdn.jtvnw.net/emoticons/v2/{}/default/dark/1.0",
+                        emote
+                    );
+                    let start = start_emote - cur;
+                    let expeced_location = end_emote - start_emote + 1;
+
+                    let (remain2, (prev, expected)) =
+                        tuple((take(start), take(expeced_location)))(remain)?;
+
+                    remain = remain2;
+                    cur = end_emote + 1;
+
+                    if !(prev.is_empty()
+                        || prev.len() == 1 && prev.chars().next().unwrap().is_whitespace())
+                    {
+                        result.push(MessageCDN::Normal(Normal::new(prev)));
+                    };
+
+                    result.push(MessageCDN::Emote(EmoteCDN::new(emote, expected, &cdn_url)))
                 }
 
                 if remain.len() != 0 {
@@ -122,6 +181,54 @@ impl Emotes {
             }
         }
     }
+
+    pub fn get_data_str<'a>(
+        msg: &'a str,
+        emotes: Option<Vec<(&str, u64, u64)>>,
+        template: &EmotesTemplate,
+    ) -> IResult<&'a str, Option<Vec<Message>>> {
+        match emotes {
+            None => Ok(("", None)),
+            Some(emoets_list) => {
+                let mut result = vec![];
+                let data = &template.data;
+                let mut cur = 0;
+                let mut remain = msg;
+
+                for (emote, start_emote, end_emote) in emoets_list.into_iter() {
+                    let find_emote = data.iter().find(|value| value.id == emote);
+                    let start = start_emote - cur;
+                    let expeced_location = end_emote - start_emote + 1;
+
+                    let (remain2, (prev, expected)) =
+                        tuple((take(start), take(expeced_location)))(remain)?;
+
+                    remain = remain2;
+                    cur = end_emote + 1;
+
+                    if !(prev.is_empty()
+                        || prev.len() == 1 && prev.chars().next().unwrap().is_whitespace())
+                    {
+                        result.push(Message::Normal(Normal::new(prev)));
+                    };
+
+                    match find_emote {
+                        Some(value) => {
+                            result.push(Message::Emote(value.clone()));
+                        }
+                        None => {
+                            result.push(Message::Unknown(Unknown::new(expected, &emote)));
+                        }
+                    };
+                }
+
+                if remain.len() != 0 {
+                    result.push(Message::Normal(Normal::new(remain)));
+                }
+                Ok(("", Some(result)))
+            }
+        }
+    }
 }
 
 fn emotes_set(msg: &str) -> IResult<&str, Vec<(String, u64, u64)>> {
@@ -134,6 +241,20 @@ fn emotes_set(msg: &str) -> IResult<&str, Vec<(String, u64, u64)>> {
         .into_iter()
         .map(|(start, end)| (emote_id.to_string(), start, end))
         .collect::<Vec<(String, u64, u64)>>();
+
+    Ok((msg, result))
+}
+
+fn emotes_set_str(msg: &str) -> IResult<&str, Vec<(&str, u64, u64)>> {
+    let (msg, (emote_id, locations)) = tuple((
+        terminated(take_until(":"), tag(":")),
+        separated_list0(tag(","), start_end),
+    ))(msg)?;
+
+    let result = locations
+        .into_iter()
+        .map(|(start, end)| (emote_id, start, end))
+        .collect::<Vec<(&str, u64, u64)>>();
 
     Ok((msg, result))
 }
