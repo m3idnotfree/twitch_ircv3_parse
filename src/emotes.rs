@@ -12,8 +12,8 @@ use serde::{Deserialize, Serialize};
 pub struct Emotes {}
 
 impl Emotes {
-    pub fn parse(msg: &str) -> Option<Vec<(String, u64, u64)>> {
-        let (_, result) = opt(separated_list1(tag("/"), emotes_set))(msg).unwrap();
+    pub fn parse_string(msg: &str) -> Option<Vec<(String, u64, u64)>> {
+        let (_, result) = opt(separated_list1(tag("/"), emotes_set_string))(msg).unwrap();
         match result {
             Some(value) => {
                 let mut value = value
@@ -29,8 +29,8 @@ impl Emotes {
         }
     }
 
-    pub fn parse_str(msg: &str) -> Option<Vec<(&str, u64, u64)>> {
-        let (_, result) = opt(separated_list1(tag("/"), emotes_set_str))(msg).unwrap();
+    pub fn parse(msg: &str) -> Option<Vec<(&str, u64, u64)>> {
+        let (_, result) = opt(separated_list1(tag("/"), emotes_set))(msg).unwrap();
         match result {
             Some(value) => {
                 let mut value = value
@@ -46,7 +46,7 @@ impl Emotes {
         }
     }
 
-    pub fn get_data_cdn_url<'a>(
+    pub fn get_data_cdn_url_string<'a>(
         msg: &'a str,
         emotes: Option<Vec<(String, u64, u64)>>,
     ) -> IResult<&'a str, Option<Vec<MessageCDN>>> {
@@ -92,7 +92,7 @@ impl Emotes {
         }
     }
 
-    pub fn get_data_cdn_url_str<'a>(
+    pub fn get_data_cdn_url<'a>(
         msg: &'a str,
         emotes: Option<Vec<(&str, u64, u64)>>,
     ) -> IResult<&'a str, Option<Vec<MessageCDN>>> {
@@ -134,7 +134,7 @@ impl Emotes {
         }
     }
 
-    pub fn get_data<'a>(
+    pub fn get_data_string<'a>(
         msg: &'a str,
         emotes: Option<Vec<(String, u64, u64)>>,
         template: &EmotesTemplate,
@@ -182,7 +182,7 @@ impl Emotes {
         }
     }
 
-    pub fn get_data_str<'a>(
+    pub fn get_data<'a>(
         msg: &'a str,
         emotes: Option<Vec<(&str, u64, u64)>>,
         template: &EmotesTemplate,
@@ -231,7 +231,7 @@ impl Emotes {
     }
 }
 
-fn emotes_set(msg: &str) -> IResult<&str, Vec<(String, u64, u64)>> {
+fn emotes_set_string(msg: &str) -> IResult<&str, Vec<(String, u64, u64)>> {
     let (msg, (emote_id, locations)) = tuple((
         terminated(take_until(":"), tag(":")),
         separated_list0(tag(","), start_end),
@@ -245,7 +245,7 @@ fn emotes_set(msg: &str) -> IResult<&str, Vec<(String, u64, u64)>> {
     Ok((msg, result))
 }
 
-fn emotes_set_str(msg: &str) -> IResult<&str, Vec<(&str, u64, u64)>> {
+fn emotes_set(msg: &str) -> IResult<&str, Vec<(&str, u64, u64)>> {
     let (msg, (emote_id, locations)) = tuple((
         terminated(take_until(":"), tag(":")),
         separated_list0(tag(","), start_end),

@@ -11,17 +11,20 @@ use serde::{Deserialize, Serialize};
 pub struct Badges {}
 
 impl Badges {
-    pub fn parse(msg: &str) -> Option<Vec<(String, String)>> {
+    pub fn parse_string(msg: &str) -> Option<Vec<(String, String)>> {
         let (_, result) = badges_string(msg).unwrap();
         result
     }
 
-    pub fn parse_str(msg: &str) -> Option<Vec<(&str, &str)>> {
+    pub fn parse(msg: &str) -> Option<Vec<(&str, &str)>> {
         let (_, result) = badges_str(msg).unwrap();
         result
     }
 
-    pub fn get_data(badges: Vec<(String, String)>, template: &BadgeTemplate) -> Vec<BadgeData> {
+    pub fn get_data_string(
+        badges: Vec<(String, String)>,
+        template: &BadgeTemplate,
+    ) -> Vec<BadgeData> {
         let data = &template.data;
         badges
             .into_iter()
@@ -37,7 +40,7 @@ impl Badges {
             .collect()
     }
 
-    pub fn get_data_str(badges: Vec<(&str, &str)>, template: &BadgeTemplate) -> Vec<BadgeData> {
+    pub fn get_data(badges: Vec<(&str, &str)>, template: &BadgeTemplate) -> Vec<BadgeData> {
         let data = &template.data;
         badges
             .into_iter()

@@ -3,26 +3,27 @@ use nom::{
     sequence::preceded,
     IResult,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{emotes, BadgeData};
 
-#[derive(Debug, Serialize)]
-pub struct ChatInfo {
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ChatInfo<'a> {
     #[serde(rename = "type")]
-    pub kind: String,
-    pub time: Option<String>,
+    pub kind: &'a str,
+    pub time: Option<&'a str>,
     pub badges: Option<Vec<BadgeData>>,
     pub message: Option<Vec<emotes::Message>>,
 }
 
-impl ChatInfo {
-    pub fn new<T: Into<String>>(
-        kind: T,
-        time: Option<String>,
+impl<'a> ChatInfo<'a> {
+    // pub fn new<T: Into<String>>(
+    pub fn new(
+        kind: &'a str,
+        time: Option<&'a str>,
         badges: Option<Vec<BadgeData>>,
         message: Option<Vec<emotes::Message>>,
-    ) -> ChatInfo {
+    ) -> ChatInfo<'a> {
         ChatInfo {
             kind: kind.into(),
             time,
