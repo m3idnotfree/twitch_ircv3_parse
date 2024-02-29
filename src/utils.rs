@@ -17,7 +17,6 @@ pub struct ChatInfo<'a> {
 }
 
 impl<'a> ChatInfo<'a> {
-    // pub fn new<T: Into<String>>(
     pub fn new(
         kind: &'a str,
         time: Option<&'a str>,

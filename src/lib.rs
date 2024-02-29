@@ -22,7 +22,6 @@ pub trait ChatFormatJson<'a> {
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct PrivMsg<'a> {
-    // pub tags: Option<HashMap<String, String>>,
     pub tags: Option<HashMap<&'a str, &'a str>>,
     pub badges: Option<Vec<(&'a str, &'a str)>>,
     pub emotes: Option<Vec<(&'a str, u64, u64)>>,
@@ -38,16 +37,14 @@ impl<'a> ChatFormatJson<'a> for PrivMsg<'a> {
         emoets_template: &EmotesTemplate,
     ) -> ChatInfo<'a> {
         let binding = self.tags.unwrap();
-        // let time = self.tags.unwrap().get("tmi-sent-ts").unwrap();
+
         let time = binding.get("tmi-sent-ts").unwrap();
         let badges = self
             .badges
             .map(|value| Badges::get_data(value, badges_template));
 
-        // println!("{:#?}", badges);
-        // let m = self.params.get("message").unwrap().as_str();
         let m = self.params.get("message").unwrap();
-        // println!("m = {}", m);
+
         let (_, message) = Emotes::get_data(m, self.emotes, emoets_template).unwrap();
 
         ChatInfo::new("PRIVMSG", Some(time), badges, message)
@@ -56,7 +53,6 @@ impl<'a> ChatFormatJson<'a> for PrivMsg<'a> {
 
 impl<'a> PrivMsg<'a> {
     pub fn new(
-        // tags: Option<HashMap<String, String>>,
         tags: Option<HashMap<&'a str, &'a str>>,
         prefix: Option<(&'a str, Option<&'a str>)>,
         params: &'a str,
@@ -65,8 +61,6 @@ impl<'a> PrivMsg<'a> {
 
         let (tags, badges, emotes) = match tags {
             Some(mut value) => {
-                // let badges = Badges::parse(value.get("badges").unwrap().as_str());
-                // let emotes = Emotes::parse(value.get("emotes").unwrap().as_str());
                 let badges = Badges::parse(value.get("badges").unwrap());
                 let emotes = Emotes::parse(value.get("emotes").unwrap());
 
@@ -119,7 +113,6 @@ pub struct Number<'a> {
     message: &'a str,
 }
 impl<'a> Number<'a> {
-    // pub fn new<T: Into<String>>(command: T, message: T) -> Number {
     pub fn new(command: &'a str, message: &'a str) -> Number<'a> {
         Number { command, message }
     }
@@ -181,7 +174,6 @@ impl TwitchIrcMessage {
             "CAP" => Ircv3::Cap(Cap::new(result.message)),
             "001" => Ircv3::Number(Number::new("001", result.message)),
             "PRIVMSG" => Ircv3::Priv(PrivMsg::new(
-                // result.tags.hashmap_string(),
                 result.tags.hashmap_str(),
                 result.prefix.to_str(),
                 result.message,
