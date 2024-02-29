@@ -12,7 +12,12 @@ pub struct Badges {}
 
 impl Badges {
     pub fn parse(msg: &str) -> Option<Vec<(String, String)>> {
-        let (_, result) = badges(msg).unwrap();
+        let (_, result) = badges_string(msg).unwrap();
+        result
+    }
+
+    pub fn parse_str(msg: &str) -> Option<Vec<(&str, &str)>> {
+        let (_, result) = badges_str(msg).unwrap();
         result
     }
 
@@ -31,18 +36,42 @@ impl Badges {
             })
             .collect()
     }
+
+    pub fn get_data_str(badges: Vec<(&str, &str)>, template: &BadgeTemplate) -> Vec<BadgeData> {
+        let data = &template.data;
+        badges
+            .into_iter()
+            .map(|(key, value)| {
+                let select = data.iter().find(|b| b.set_id == key).unwrap();
+
+                let versions = select.versions.iter().find(|h| h.id == value).unwrap();
+                BadgeData {
+                    set_id: key.to_string(),
+                    versions: versions.clone(),
+                }
+            })
+            .collect()
+    }
 }
 
-fn badges(msg: &str) -> IResult<&str, Option<Vec<(String, String)>>> {
-    opt(separated_list1(tag(","), key_value))(msg)
+fn badges_string(msg: &str) -> IResult<&str, Option<Vec<(String, String)>>> {
+    opt(separated_list1(tag(","), key_value_string))(msg)
 }
 
-fn key_value(msg: &str) -> IResult<&str, (String, String)> {
+fn badges_str(msg: &str) -> IResult<&str, Option<Vec<(&str, &str)>>> {
+    opt(separated_list1(tag(","), key_value_str))(msg)
+}
+
+fn key_value_string(msg: &str) -> IResult<&str, (String, String)> {
     separated_pair(
         map(take_until1("/"), |s: &str| s.to_string()),
         tag("/"),
         map(is_not(","), |s: &str| s.to_string()),
     )(msg)
+}
+
+fn key_value_str(msg: &str) -> IResult<&str, (&str, &str)> {
+    separated_pair(take_until1("/"), tag("/"), is_not(","))(msg)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
