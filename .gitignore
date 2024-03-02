@@ -1,0 +1,7 @@
+/target
+Cargo.lock
+/result.json
+/emotes.json
+/emotes.json
+/badges.json
+/src/main.rs
