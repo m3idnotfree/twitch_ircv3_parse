@@ -6,7 +6,7 @@ use nom::{
     IResult,
 };
 use serde::{Deserialize, Serialize};
-use twitch_api::badges::{Badge, BadgeResponse};
+use twitch_helix_api::badges::{Badge, BadgeResponse};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct BadgesTag<'a> {
