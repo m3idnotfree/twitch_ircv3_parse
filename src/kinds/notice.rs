@@ -6,10 +6,7 @@ use crate::kinds::utils::IrcMessageBase;
 
 #[derive(Debug, PartialEq)]
 pub struct Notice<'a> {
-    // pub tags: Option<HashMap<&'a str, &'a str>>,
-    // pub prefix: Option<(&'a str, Option<&'a str>)>,
     pub command: &'a str,
-    // pub params: ChannelNMsg,
     data: IrcMessageBase<'a>,
 }
 
@@ -22,16 +19,13 @@ impl<'a> Notice<'a> {
         let basic = IrcMessageBase::new(tags, prefix, params);
 
         Notice {
-            // tags: basic.tags.to_owned(),
-            // prefix: basic.prefix.to_str(),
             command: "NOTICE",
-            // params: basic.c_m(),
             data: basic,
         }
     }
 
-    pub fn get_tags(&self) -> Option<HashMap<&'a str, &'a str>> {
-        self.data.get_tags()
+    pub fn get_tags(&self) -> Option<HashMap<String, String>> {
+        self.data.tags.clone()
     }
 
     pub fn get_prefix(&self) -> Option<(&'a str, Option<&'a str>)> {
