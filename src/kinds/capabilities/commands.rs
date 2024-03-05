@@ -8,6 +8,7 @@ use nom::{
     sequence::{terminated, tuple},
     IResult,
 };
+use serde::{Deserialize, Serialize};
 
 use crate::kinds::utils::IrcMessageBase;
 
@@ -48,6 +49,22 @@ impl<'a> ClearChat<'a> {
             data: IrcMessageBase::new(tags, prefix, params),
         }
     }
+
+    pub fn get_tags(&self) -> Option<HashMap<String, String>> {
+        self.data.tags.clone()
+    }
+
+    pub fn get_prefix(&self) -> Option<(&'a str, Option<&'a str>)> {
+        self.data.get_prefix()
+    }
+
+    pub fn get_channel_n_message(&self) -> ChannelnMsg {
+        self.data.c_m()
+    }
+
+    pub fn get_channel(&self) -> &str {
+        self.data.channel()
+    }
 }
 #[derive(Debug, PartialEq)]
 pub struct ClearMsg<'a> {
@@ -66,12 +83,22 @@ impl<'a> ClearMsg<'a> {
             data: IrcMessageBase::new(tags, prefix, params),
         }
     }
+
+    pub fn get_tags(&self) -> Option<HashMap<String, String>> {
+        self.data.tags.clone()
+    }
+
+    pub fn get_prefix(&self) -> Option<(&'a str, Option<&'a str>)> {
+        self.data.get_prefix()
+    }
+
+    pub fn get_channel_n_message(&self) -> ChannelnMsg {
+        self.data.c_m()
+    }
 }
 
 #[derive(Debug, PartialEq)]
 pub struct GlobalUserState<'a> {
-    // pub tags: Option<HashMap<&'a str, &'a str>>,
-    // pub prefix: Option<(&'a str, Option<&'a str>)>,
     pub command: &'a str,
     data: IrcMessageBase<'a>,
 }
@@ -85,14 +112,13 @@ impl<'a> GlobalUserState<'a> {
         let basic = IrcMessageBase::new(tags, prefix, params);
 
         GlobalUserState {
-            // tags: basic.tags.to_owned(),
-            // prefix: basic.prefix.to_str(),
             command: "GLOBALUSERSTATE",
             data: basic,
         }
     }
-    pub fn get_tags(&self) -> Option<HashMap<&'a str, &'a str>> {
-        self.data.get_tags()
+
+    pub fn get_tags(&self) -> Option<HashMap<String, String>> {
+        self.data.tags.clone()
     }
 
     pub fn get_prefix(&self) -> Option<(&'a str, Option<&'a str>)> {
@@ -136,9 +162,9 @@ pub struct Reconnect {
     pub command: String,
 }
 
-impl Reconnect {
-    pub fn new() -> Reconnect {
-        Reconnect {
+impl Default for Reconnect {
+    fn default() -> Self {
+        Self {
             command: "RECONNECT".into(),
         }
     }
@@ -161,6 +187,18 @@ impl<'a> RoomState<'a> {
             data: IrcMessageBase::new(tags, prefix, params),
         }
     }
+
+    pub fn get_tags(&self) -> Option<HashMap<String, String>> {
+        self.data.tags.clone()
+    }
+
+    pub fn get_prefix(&self) -> Option<(&'a str, Option<&'a str>)> {
+        self.data.get_prefix()
+    }
+
+    pub fn get_channel(&self) -> &str {
+        self.data.channel()
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -180,13 +218,27 @@ impl<'a> UserNotice<'a> {
             data: IrcMessageBase::new(tags, prefix, params),
         }
     }
+
+    pub fn get_tags(&self) -> Option<HashMap<String, String>> {
+        self.data.tags.clone()
+    }
+
+    pub fn get_prefix(&self) -> Option<(&'a str, Option<&'a str>)> {
+        self.data.get_prefix()
+    }
+
+    pub fn get_channel_n_message(&self) -> ChannelnMsg {
+        self.data.c_m()
+    }
+
+    pub fn get_channel(&self) -> &str {
+        self.data.channel()
+    }
 }
 
 #[derive(Debug, PartialEq)]
 pub struct UserState<'a> {
-    // pub tags: Option<HashMap<&'a str, &'a str>>,
     pub command: &'a str,
-    // pub channel: String,
     data: IrcMessageBase<'a>,
 }
 
@@ -196,17 +248,14 @@ impl<'a> UserState<'a> {
         prefix: Ircv3Prefix<'a>,
         params: Ircv3Params<'a>,
     ) -> UserState<'a> {
-        // let (_, channel) = params.channel().unwrap();
         UserState {
-            // tags: tags.hashmap_str(),
             command: "USERSTATE",
-            // channel: channel.to_string(),
             data: IrcMessageBase::new(tags, prefix, params),
         }
     }
 
-    pub fn get_tags(&self) -> Option<HashMap<&'a str, &'a str>> {
-        self.data.get_tags()
+    pub fn get_tags(&self) -> Option<HashMap<String, String>> {
+        self.data.tags.clone()
     }
 
     pub fn get_channel(&self) -> ChannelnMsg {
@@ -231,4 +280,21 @@ impl<'a> Whisper<'a> {
             data: IrcMessageBase::new(tags, prefix, params),
         }
     }
+
+    pub fn from_to(&self) -> FromTo {
+        let (user, _) = self.data.get_prefix().unwrap();
+        let c_m = self.data.c_m();
+        FromTo {
+            from: c_m.channel,
+            to: user.into(),
+            message: c_m.message,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct FromTo {
+    from: String,
+    to: String,
+    message: String,
 }
