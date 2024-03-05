@@ -6,28 +6,45 @@ use nom::{
     IResult,
 };
 use serde::{Deserialize, Serialize};
-use twitch_helix_api::badges::{Badge, BadgeResponse};
+use twitch_highway::badges::{Badge, BadgeResponse};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
-pub struct BadgesTag<'a> {
-    pub data: &'a str,
+pub struct BadgesTag {
+    pub data: String,
 }
 
-impl<'a> BadgesTag<'a> {
-    pub fn new(data: &'a str) -> BadgesTag {
-        BadgesTag { data }
+impl BadgesTag {
+    pub fn new<T: Into<String>>(data: T) -> BadgesTag {
+        BadgesTag { data: data.into() }
     }
 
     pub fn parse_string(&self) -> Option<Vec<(String, String)>> {
-        let (_, result) = badges_string(self.data).unwrap();
+        let (_, result) = badges_string(self.data.as_str()).unwrap();
 
         result
     }
 
     pub fn parse(&self) -> Option<Vec<(&str, &str)>> {
-        let (_, result) = badges_str(self.data).unwrap();
+        let (_, result) = badges_str(self.data.as_str()).unwrap();
 
         result
+    }
+
+    pub fn find_badges(&self, template: &BadgeResponse) -> Vec<Badge> {
+        let badges = self.parse().unwrap();
+        let data = &template.data;
+        badges
+            .into_iter()
+            .map(|(key, value)| {
+                let select = data.iter().find(|b| b.set_id == key).unwrap();
+
+                let versions = select.versions.iter().find(|h| h.id == value).unwrap();
+                Badge {
+                    set_id: key.to_string(),
+                    versions: versions.clone(),
+                }
+            })
+            .collect()
     }
 
     pub fn get_data_string(badges: Vec<(String, String)>, template: &BadgeResponse) -> Vec<Badge> {
@@ -40,23 +57,6 @@ impl<'a> BadgesTag<'a> {
                 let versions = select.versions.iter().find(|h| h.id == value).unwrap();
                 Badge {
                     set_id: key,
-                    versions: versions.clone(),
-                }
-            })
-            .collect()
-    }
-
-    pub fn get_data(&self, template: &BadgeResponse) -> Vec<Badge> {
-        let badges = self.parse().unwrap();
-        let data = &template.data;
-        badges
-            .into_iter()
-            .map(|(key, value)| {
-                let select = data.iter().find(|b| b.set_id == key).unwrap();
-
-                let versions = select.versions.iter().find(|h| h.id == value).unwrap();
-                Badge {
-                    set_id: key.to_string(),
                     versions: versions.clone(),
                 }
             })
