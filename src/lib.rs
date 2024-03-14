@@ -1,69 +1,67 @@
-pub mod kinds;
+use ircv3_parse::{ircv3_parse, IRCv3Params, IRCv3Prefix, IRCv3Tags};
+use kind::{Command, Output};
 
-mod tags;
-pub use tags::*;
-
+pub mod kind;
+pub mod tags;
 pub mod utils;
 
+use tags::{parse_badges, parse_emotes};
 pub use twitch_highway::badges::{BadgeResponse, Badges};
 pub use twitch_highway::emotes::{
     Emote, EmoteChannelResponse, EmoteGlobalResponse, EmoteSetsResponse,
 };
 
-// use kinds::{
-//     capabilities::{
-//         commands::{
-//             ClearChat, ClearMsg, GlobalUserState, HostTarget, Reconnect, RoomState, UserNotice,
-//             UserState, Whisper,
-//         },
-//         Cap,
-//     },
-//     Member, Notice, PrivMsg, Unknown,
-// };
+pub struct TwitchMessage<'a> {
+    pub tags: IRCv3Tags<'a>,
+    pub prefix: IRCv3Prefix<'a>,
+    pub command: Command,
+    pub params: IRCv3Params<'a>,
+}
 
-// #[derive(Debug, PartialEq)]
-// pub enum TwitchIrcMessage<'a> {
-//     Privmsg(PrivMsg<'a>),
-//     Notice(Notice<'a>),
-//     /// join, part
-//     Member(Member),
-//     ClearChat(ClearChat<'a>),
-//     ClearMsg(ClearMsg<'a>),
-//     GlobalUserState(GlobalUserState<'a>),
-//     RoomState(RoomState<'a>),
-//     UserNotice(UserNotice<'a>),
-//     UserState(UserState<'a>),
-//     Cap(Cap<'a>),
-//     Hosttarget(HostTarget),
-//     Reconnect(Reconnect),
-//     Whisper(Whisper<'a>),
-//     Unknown(Unknown<'a>),
-//     Unimplemented,
-// }
+impl<'a> TwitchMessage<'a> {
+    pub fn new(
+        tags: IRCv3Tags<'a>,
+        prefix: IRCv3Prefix<'a>,
+        command: &'a str,
+        params: IRCv3Params<'a>,
+    ) -> Self {
+        Self {
+            tags,
+            prefix,
+            command: Command::from(command),
+            params,
+        }
+    }
 
-// impl<'a> TwitchIrcMessage<'a> {
-//     pub fn parse(msg: &str) -> TwitchIrcMessage {
-//         let (tags, prefix, command, params) = ircv3_parse(msg);
-//         match command {
-//             "CAP" => TwitchIrcMessage::Cap(Cap::new(params)),
-//             "JOIN" | "PART" => {
-//                 TwitchIrcMessage::Member(Member::new(command.into(), prefix, params))
-//             }
-//             "GLOBALUSERSTATE" => {
-//                 TwitchIrcMessage::GlobalUserState(GlobalUserState::new(tags, prefix, params))
-//             }
-//
-//             "ROOMSTATE" => TwitchIrcMessage::RoomState(RoomState::new(tags, prefix, params)),
-//             "USERNOTICE" => TwitchIrcMessage::UserNotice(UserNotice::new(tags, prefix, params)),
-//             "USERSTATE" => TwitchIrcMessage::UserState(UserState::new(tags, prefix, params)),
-//             "WHISPER" => TwitchIrcMessage::Whisper(Whisper::new(tags, prefix, params)),
-//             "CLEARCHAT" => TwitchIrcMessage::ClearChat(ClearChat::new(tags, prefix, params)),
-//             "CLEARMSG" => TwitchIrcMessage::ClearMsg(ClearMsg::new(tags, prefix, params)),
-//             "NOTICE" => TwitchIrcMessage::Notice(Notice::new(tags, prefix, params)),
-//             "PRIVMSG" => TwitchIrcMessage::Privmsg(PrivMsg::new(tags, prefix, params)),
-//             "HOSTTARGET" => TwitchIrcMessage::Hosttarget(HostTarget::new(params)),
-//             "RECONNECT" => TwitchIrcMessage::Reconnect(Reconnect::default()),
-//             _ => TwitchIrcMessage::Unknown(Unknown::new(tags, command, prefix, params)),
-//         }
-//     }
-// }
+    pub fn parse(msg: &'a str) -> Self {
+        let (tags, prefix, command, params) = ircv3_parse(msg);
+        Self {
+            tags,
+            prefix,
+            command: Command::from(command),
+            params,
+        }
+    }
+
+    pub fn output(self, badges_template: &BadgeResponse) -> Output {
+        let badges = self.tags.get("badges").and_then(|value| {
+            let value = parse_badges(value);
+            // value.output(badges_template)
+            value.output(badges_template)
+        });
+
+        let messages = self.params.message().and_then(|value| {
+            self.tags.get("emotes").and_then(|k| {
+                let a = parse_emotes(k);
+                a.output(value)
+            })
+        });
+
+        Output {
+            kind: "message".to_string(),
+            command: self.command,
+            badges,
+            body: messages,
+        }
+    }
+}
