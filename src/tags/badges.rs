@@ -5,81 +5,58 @@ use nom::{
     sequence::separated_pair,
     IResult,
 };
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use twitch_highway::badges::{Badge, BadgeResponse};
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
-pub struct BadgesTag {
-    pub data: String,
-}
+#[derive(Debug, PartialEq, Serialize)]
+pub struct BadgesTag(pub Option<Vec<(String, String)>>);
 
 impl BadgesTag {
-    pub fn new<T: Into<String>>(data: T) -> BadgesTag {
-        BadgesTag { data: data.into() }
+    pub fn new(badges: Option<Vec<(String, String)>>) -> Self {
+        Self(badges)
     }
 
-    pub fn parse_string(&self) -> Option<Vec<(String, String)>> {
-        let (_, result) = badges_string(self.data.as_str()).unwrap();
+    pub fn output(self, template: &BadgeResponse) -> Option<Vec<Badge>> {
+        self.0.map(|value| {
+            let data = &template.data;
+            value
+                .into_iter()
+                .map(|(key, value)| {
+                    let select = data.iter().find(|b| b.set_id == key).unwrap();
 
-        result
-    }
-
-    pub fn parse(&self) -> Option<Vec<(&str, &str)>> {
-        let (_, result) = badges_str(self.data.as_str()).unwrap();
-
-        result
-    }
-
-    pub fn find_badges(&self, template: &BadgeResponse) -> Vec<Badge> {
-        let badges = self.parse().unwrap();
-        let data = &template.data;
-        badges
-            .into_iter()
-            .map(|(key, value)| {
-                let select = data.iter().find(|b| b.set_id == key).unwrap();
-
-                let versions = select.versions.iter().find(|h| h.id == value).unwrap();
-                Badge {
-                    set_id: key.to_string(),
-                    versions: versions.clone(),
-                }
-            })
-            .collect()
-    }
-
-    pub fn get_data_string(badges: Vec<(String, String)>, template: &BadgeResponse) -> Vec<Badge> {
-        let data = &template.data;
-        badges
-            .into_iter()
-            .map(|(key, value)| {
-                let select = data.iter().find(|b| b.set_id == key).unwrap();
-
-                let versions = select.versions.iter().find(|h| h.id == value).unwrap();
-                Badge {
-                    set_id: key,
-                    versions: versions.clone(),
-                }
-            })
-            .collect()
+                    let versions = select.versions.iter().find(|h| h.id == value).unwrap();
+                    Badge {
+                        set_id: key.to_string(),
+                        versions: versions.clone(),
+                    }
+                })
+                .collect()
+        })
     }
 }
 
-fn badges_string(msg: &str) -> IResult<&str, Option<Vec<(String, String)>>> {
-    opt(separated_list1(tag(","), key_value_string))(msg)
+impl AsRef<Option<Vec<(String, String)>>> for BadgesTag {
+    fn as_ref(&self) -> &Option<Vec<(String, String)>> {
+        &self.0
+    }
 }
 
-fn badges_str(msg: &str) -> IResult<&str, Option<Vec<(&str, &str)>>> {
-    opt(separated_list1(tag(","), key_value_str))(msg)
+pub fn parse_badges(msg: &str) -> BadgesTag {
+    let (_, result) = parse(msg).unwrap();
+
+    BadgesTag(result)
 }
 
-fn key_value_string(msg: &str) -> IResult<&str, (String, String)> {
+fn parse(msg: &str) -> IResult<&str, Option<Vec<(String, String)>>> {
+    opt(separated_list1(tag(","), key_value))(msg)
+}
+
+fn key_value(msg: &str) -> IResult<&str, (String, String)> {
     separated_pair(
+        // take_until1("/"),
         map(take_until1("/"), |s: &str| s.to_string()),
         tag("/"),
+        // is_not(",")
         map(is_not(","), |s: &str| s.to_string()),
     )(msg)
-}
-
-fn key_value_str(msg: &str) -> IResult<&str, (&str, &str)> {
-    separated_pair(take_until1("/"), tag("/"), is_not(","))(msg)
 }
