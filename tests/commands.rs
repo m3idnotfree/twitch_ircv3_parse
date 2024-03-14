@@ -1,13 +1,14 @@
-use ircv3_parse::Ircv3Parse;
-use twitch_ircv3_parse::kinds::capabilities::commands::HostTarget;
+use twitch_ircv3_parse::{utils::parse_hosttarget, TwitchMessage};
 
 #[test]
 fn hosttarget() {
-    let msg = ":tmi.twitch.tv HOSTTARGET #<hosting-channel> :[-|<channel>] <number-of-viewers>";
-    let result = Ircv3Parse::new(msg);
-    let result = HostTarget::new(result.params);
-    assert_eq!(result.command, "HOSTTARGET");
-    assert_eq!(result.host_channel, "#<hosting-channel>");
-    assert_eq!(result.channel, "[-|<channel>]");
-    assert_eq!(result.number_of_viewers, "<number-of-viewers>");
+    let msg = ":tmi.twitch.tv HOSTTARGET #<hosting-channel> :[-|<channel>] 1";
+    let msg = TwitchMessage::parse(msg);
+
+    assert_eq!(msg.command.to_string(), "HOSTTARGET");
+    let msg = parse_hosttarget(msg.params);
+
+    assert_eq!(msg.hosting_channel, "#<hosting-channel>".to_string());
+    assert_eq!(msg.channel, "[-|<channel>]".to_string());
+    assert_eq!(msg.number_of_viewers, 1);
 }

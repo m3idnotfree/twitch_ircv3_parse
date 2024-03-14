@@ -1,21 +1,13 @@
-use ircv3_parse::Ircv3Parse;
-use twitch_ircv3_parse::kinds::Notice;
+use twitch_ircv3_parse::TwitchMessage;
 
 #[test]
 fn notice_base() {
     let msg = ":tmi.twitch.tv NOTICE * :Improperly formatted auth";
-    let msg = Ircv3Parse::new(msg);
+    let msg = TwitchMessage::parse(msg);
 
-    let expected_prefix = ("tmi.twitch.tv", None);
-    let expected_command = "NOTICE";
-    let expected_channel = "*";
-    let expected_message = "Improperly formatted auth";
-
-    let result = Notice::new(msg.tags, msg.prefix, msg.params);
-    assert_eq!(result.get_tags(), None);
-    assert_eq!(result.get_prefix(), Some(expected_prefix));
-    assert_eq!(result.command, expected_command);
-    let s = result.get_channel_message();
-    assert_eq!(s.message, expected_message);
-    assert_eq!(s.channel, expected_channel);
+    assert_eq!(msg.command.to_string(), "NOTICE".to_string());
+    assert_eq!(msg.params.channel(), Some("*"));
+    assert_eq!(msg.params.message(), Some("Improperly formatted auth"));
+    assert_eq!(msg.prefix.server_nick(), Some("tmi.twitch.tv"));
+    assert_eq!(msg.prefix.user(), None);
 }
